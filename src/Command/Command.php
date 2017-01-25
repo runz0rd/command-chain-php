@@ -42,7 +42,7 @@ class Command implements ICommand {
      * @param array $arguments
      * @throws \Exception
      */
-    public function __construct($instance, $method, $arguments = array()) {
+    public function __construct($instance, $method, array $arguments = array()) {
         if(!method_exists($instance, $method)) {
             throw new \Exception('Method ' . $method . ' not found in class ' . get_class($instance));
         }
@@ -51,7 +51,7 @@ class Command implements ICommand {
         $this->arguments = $arguments;
     }
 
-    public function addRollback($instance, $method, $arguments = array()) {
+    public function addRollback($instance, $method, array $arguments = array()) {
         $this->rollback = new Command($instance, $method, $arguments);
     }
 
@@ -59,7 +59,7 @@ class Command implements ICommand {
         if(!empty($arguments)) {
             $this->arguments = $arguments;
         }
-        $this->result = call_user_func(array($this->instance, $this->method), $this->arguments);
+        $this->result = call_user_func_array(array($this->instance, $this->method), $this->arguments);
     }
 
     /**

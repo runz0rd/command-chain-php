@@ -9,5 +9,33 @@
 
 class CommandTest extends PHPUnit_Framework_TestCase {
 
+    /**
+     * @var \Command\ICommand
+     */
+    private $command;
 
+    public function setUp()
+    {
+        $mockCommand = new MockCommand();
+        $this->command = new Command\Command($mockCommand, 'testMethod', array('test'));
+        parent::setUp();
+    }
+
+    /**
+     * @expectedException Exception
+     */
+    public function testConstructFail() {
+        $mockCommand = new MockCommand();
+        $command = new Command\Command($mockCommand, 'badMethod', array('test'));
+    }
+
+    public function testRun() {
+        $this->command->run();
+        $this->assertEquals('test', $this->command->getResult());
+    }
+
+    public function testRunWithArguments() {
+        $this->command->run(array('asdf'));
+        $this->assertEquals('asdf', $this->command->getResult());
+    }
 }

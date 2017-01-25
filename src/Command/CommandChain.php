@@ -8,7 +8,6 @@
 
 namespace Command;
 
-
 class CommandChain {
 
     /**
@@ -34,6 +33,10 @@ class CommandChain {
         $this->rollbackSilentFail = $rollbackSilentFail;
     }
 
+    /**
+     * @param string $name
+     * @param ICommand $command
+     */
     public function add($name, ICommand $command) {
         $this->commands[$name] = $command;
     }
@@ -45,6 +48,11 @@ class CommandChain {
         }
     }
 
+    /**
+     * @param string $name
+     * @return mixed
+     * @throws \Exception
+     */
     public function getResult($name) {
         if(!isset($this->completedCommands[$name])) {
             throw new \Exception('No completed command found named ' . $name);

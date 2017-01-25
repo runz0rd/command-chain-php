@@ -16,7 +16,7 @@ interface ICommand {
      * @param string $method
      * @param array $arguments
      */
-    function addRollback($instance, $method, $arguments = array());
+    function addRollback($instance, $method, array $arguments = array());
 
     /**
      * @throws \Exception
