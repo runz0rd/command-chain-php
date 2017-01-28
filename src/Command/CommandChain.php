@@ -21,30 +21,30 @@ class CommandChain {
     private $completedCommands;
 
     /**
-     * @var boolean
+     * @var \Exception[]
      */
-    private $rollbackSilentFail;
+    private $exceptionStack = array();
 
     /**
-     * CommandChain constructor.
-     * @param $rollbackSilentFail
+     * @param $name
+     * @param $instance
+     * @param $method
+     * @param array $arguments
+     * @throws \Exception
+     * @return ICommand
      */
-    public function __construct($rollbackSilentFail = true) {
-        $this->rollbackSilentFail = $rollbackSilentFail;
+    public function add($name, $instance, $method, array $arguments = array()) {
+        if(isset($this->commands[$name])) {
+            throw new \Exception('Command under name ' . $name . ' already registered.');
+        }
+        $this->commands[$name] = new Command($instance, $method, $arguments);
+        return $this->commands[$name];
     }
 
-    /**
-     * @param string $name
-     * @param ICommand $command
-     */
-    public function add($name, ICommand $command) {
-        $this->commands[$name] = $command;
-    }
-
-    public function run() {
-        foreach($this->commands as $name => $command) {
+    public function run($failSilently = false) {
+        foreach ($this->commands as $name => $command) {
             $filledArguments = $this->fillArguments($command->getArguments());
-            $this->runCommand($name, $command, $filledArguments);
+            $this->runCommand($name, $command, $filledArguments, $failSilently);
         }
     }
 
@@ -60,40 +60,47 @@ class CommandChain {
         return $this->completedCommands[$name]->getResult();
     }
 
+    public function getExceptionStack() {
+        return $this->exceptionStack;
+    }
+
     private function fillArguments(array $arguments) {
         foreach($arguments as $key => $argument) {
-            if(isset($argument[0]) && $argument[0] == '$') {
-                $name = ltrim($argument, '$');
+            if(isset($argument[0]) && $argument[0] == '_') {
+                $name = ltrim($argument, '_');
                 if(!isset($this->completedCommands[$name])) {
                     throw new \Exception('Could not find a complete command result named ' . $name);
                 }
                 $arguments[$key] = $this->completedCommands[$name]->getResult();
             }
         }
-
         return $arguments;
     }
 
-    private function runCommand($name, ICommand $command, $filledArguments) {
+    private function runCommand($name, ICommand $command, $filledArguments, $failSilently) {
         try {
             $command->run($filledArguments);
             $this->completedCommands[$name] = $command;
         }
         catch(\Exception $ex) {
+            $this->exceptionStack[] = $ex;
             $this->rollback();
-            throw $ex;
+            if(!$failSilently) {
+                throw $ex;
+            }
         }
     }
 
     private function rollback() {
-        foreach($this->completedCommands as $completedCommand) {
+        /** @var ICommand[] $completedCommands */
+        $completedCommands = array_reverse($this->completedCommands);
+        foreach($completedCommands as $name => $completedCommand) {
             try {
-                $completedCommand->getRollback()->run();
+                $rollback = $completedCommand->getRollback();
+                $rollback->run();
             }
             catch(\Exception $ex) {
-                if(!$this->rollbackSilentFail) {
-                    throw $ex;
-                }
+                $this->exceptionStack[] = $ex;
             }
         }
     }

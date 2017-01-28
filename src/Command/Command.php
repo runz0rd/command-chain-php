@@ -85,6 +85,4 @@ class Command implements ICommand {
     {
         return $this->arguments;
     }
-
-
 }

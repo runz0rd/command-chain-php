@@ -8,15 +8,21 @@
  */
 class MockCommand
 {
+
+    private $throwEx;
+
+    public function __construct($throwEx = false) {
+        $this->throwEx = $throwEx;
+    }
+
     /**
      * @param mixed $arg
-     * @param bool $throwEx
      * @return mixed
      * @throws Exception
      */
-    public function testMethod($arg, $throwEx = false) {
-        if($throwEx) {
-            throw new Exception('bad!');
+    public function testMethod($arg) {
+        if($this->throwEx) {
+            throw new Exception($arg);
         }
         return $arg;
     }
