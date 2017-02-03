@@ -55,6 +55,23 @@ class CommandChainTest extends PHPUnit_Framework_TestCase {
         $this->assertEquals('test1', $this->commandChain->getResult('command3'));
     }
 
+    public function testRunWithRollbackPlaceHolders() {
+        $this->commandChain->add('command1', new MockCommand(), 'testMethod', array('test1'))
+            ->addRollback(new MockCommand(), 'testMethod', array('_command1'));
+        $this->commandChain->add('command2', new MockCommand(), 'testMethod', array('test2'))
+            ->addRollback(new MockCommand(), 'testMethod', array('_command2'));
+        $this->commandChain->add('command3', new MockCommand(true), 'testMethod', array('test3'))
+            ->addRollback(new MockCommand(), 'testMethod', array('_command3'));
+        $this->commandChain->run(true);
+
+        $completedCommands = $this->commandChain->getCompletedCommands();
+
+        $this->assertEquals('test1', $completedCommands[0]->getResult());
+        $this->assertEquals('test2', $completedCommands[1]->getResult());
+        $this->assertEquals('test2', $completedCommands[2]->getResult());
+        $this->assertEquals('test1', $completedCommands[3]->getResult());
+    }
+
     /**
      * @expectedException Exception
      */

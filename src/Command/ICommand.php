@@ -31,6 +31,11 @@ interface ICommand {
     function getResult();
 
     /**
+     * @return bool
+     */
+    function hasRollback();
+
+    /**
      * @return Command
      */
     function getRollback();

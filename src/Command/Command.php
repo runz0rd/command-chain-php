@@ -71,6 +71,18 @@ class Command implements ICommand {
     }
 
     /**
+     * @return bool
+     */
+    public function hasRollback() {
+        $result = false;
+        if(isset($this->rollback)) {
+            $result = true;
+        }
+
+        return $result;
+    }
+
+    /**
      * @return Command
      */
     public function getRollback()

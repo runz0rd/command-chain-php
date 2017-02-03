@@ -43,8 +43,7 @@ class CommandChain {
 
     public function run($failSilently = false) {
         foreach ($this->commands as $name => $command) {
-            $filledArguments = $this->fillArguments($command->getArguments());
-            $this->runCommand($name, $command, $filledArguments, $failSilently);
+            $this->runCommand($name, $command, $failSilently);
         }
     }
 
@@ -64,6 +63,13 @@ class CommandChain {
         return $this->exceptionStack;
     }
 
+    /**
+     * @return ICommand[]
+     */
+    public function getCompletedCommands() {
+        return array_values($this->completedCommands);
+    }
+
     private function fillArguments(array $arguments) {
         foreach($arguments as $key => $argument) {
             if(isset($argument[0]) && $argument[0] == '_') {
@@ -77,8 +83,9 @@ class CommandChain {
         return $arguments;
     }
 
-    private function runCommand($name, ICommand $command, $filledArguments, $failSilently) {
+    private function runCommand($name, ICommand $command, $failSilently) {
         try {
+            $filledArguments = $this->fillArguments($command->getArguments());
             $command->run($filledArguments);
             $this->completedCommands[$name] = $command;
         }
@@ -96,8 +103,12 @@ class CommandChain {
         $completedCommands = array_reverse($this->completedCommands);
         foreach($completedCommands as $name => $completedCommand) {
             try {
-                $rollback = $completedCommand->getRollback();
-                $rollback->run();
+                if($completedCommand->hasRollback()) {
+                    $rollback = $completedCommand->getRollback();
+                    $filledArguments = $this->fillArguments($rollback->getArguments());
+                    $rollback->run($filledArguments);
+                    $this->completedCommands[$name . '-rollback'] = $rollback;
+                }
             }
             catch(\Exception $ex) {
                 $this->exceptionStack[] = $ex;
