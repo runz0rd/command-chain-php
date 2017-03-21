@@ -44,4 +44,9 @@ interface ICommand {
      * @return array
      */
     function getArguments();
+
+    /**
+     * @return string
+     */
+    function getName();
 }

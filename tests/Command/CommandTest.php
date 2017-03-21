@@ -17,7 +17,7 @@ class CommandTest extends PHPUnit_Framework_TestCase {
     public function setUp()
     {
         $mockCommand = new MockCommand();
-        $this->command = new Command\Command($mockCommand, 'testMethod', array('test'));
+        $this->command = new Command\Command('testCommand', $mockCommand, 'testMethod', array('test'));
         parent::setUp();
     }
 
@@ -26,7 +26,7 @@ class CommandTest extends PHPUnit_Framework_TestCase {
      */
     public function testConstructFail() {
         $mockCommand = new MockCommand();
-        $command = new Command\Command($mockCommand, 'badMethod', array('test'));
+        $command = new Command\Command('testCommand', $mockCommand, 'badMethod', array('test'));
     }
 
     public function testRun() {

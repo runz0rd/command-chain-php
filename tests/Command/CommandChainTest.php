@@ -46,8 +46,16 @@ class CommandChainTest extends PHPUnit_Framework_TestCase {
 
     public function testRunWithPlaceHolders() {
         $this->commandChain->add('command1', new MockCommand(), 'testMethod', array('test1'));
-        $this->commandChain->add('command2', new MockCommand(), 'testMethod', array('_command1'));
-        $this->commandChain->add('command3', new MockCommand(), 'testMethod', array('_command2'));
+        $this->commandChain->add('command2', new MockCommand(), 'testMethod', array(
+            function(\Command\CommandChain $chain) {
+                return $chain->getResult('command1');
+            }
+        ));
+        $this->commandChain->add('command3', new MockCommand(), 'testMethod', array(
+            function(\Command\CommandChain $chain) {
+                return $chain->getResult('command2');
+            }
+        ));
         $this->commandChain->run();
 
         $this->assertEquals('test1', $this->commandChain->getResult('command1'));
@@ -57,11 +65,23 @@ class CommandChainTest extends PHPUnit_Framework_TestCase {
 
     public function testRunWithRollbackPlaceHolders() {
         $this->commandChain->add('command1', new MockCommand(), 'testMethod', array('test1'))
-            ->addRollback(new MockCommand(), 'testMethod', array('_command1'));
+            ->addRollback(new MockCommand(), 'testMethod', array(
+                function(\Command\CommandChain $chain) {
+                    return $chain->getResult('command1');
+                }
+            ));
         $this->commandChain->add('command2', new MockCommand(), 'testMethod', array('test2'))
-            ->addRollback(new MockCommand(), 'testMethod', array('_command2'));
+            ->addRollback(new MockCommand(), 'testMethod', array(
+                function(\Command\CommandChain $chain) {
+                    return $chain->getResult('command2');
+                }
+            ));
         $this->commandChain->add('command3', new MockCommand(true), 'testMethod', array('test3'))
-            ->addRollback(new MockCommand(), 'testMethod', array('_command3'));
+            ->addRollback(new MockCommand(), 'testMethod', array(
+                function(\Command\CommandChain $chain) {
+                    return $chain->getResult('command3');
+                }
+            ));
         $this->commandChain->run(true);
 
         $completedCommands = $this->commandChain->getCompletedCommands();
@@ -77,8 +97,16 @@ class CommandChainTest extends PHPUnit_Framework_TestCase {
      */
     public function testRunWithPlaceHoldersFail() {
         $this->commandChain->add('command1', new MockCommand(), 'testMethod', array('test1'));
-        $this->commandChain->add('command2', new MockCommand(), 'testMethod', array('_command3'));
-        $this->commandChain->add('command3', new MockCommand(), 'testMethod', array('_command2'));
+        $this->commandChain->add('command2', new MockCommand(), 'testMethod', array(
+            function(\Command\CommandChain $chain) {
+                return $chain->getResult('command3');
+            }
+        ));
+        $this->commandChain->add('command3', new MockCommand(), 'testMethod', array(
+            function(\Command\CommandChain $chain) {
+                return $chain->getResult('command2');
+            }
+        ));
         $this->commandChain->run();
     }
 }

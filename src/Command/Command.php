@@ -11,48 +11,55 @@ namespace Command;
 class Command implements ICommand {
 
     /**
+     * @var string
+     */
+    protected $name;
+
+    /**
      * @var object
      */
-    public $instance;
+    protected $instance;
 
     /**
      * @var string
      */
-    public $method;
+    protected $method;
 
     /**
      * @var array
      */
-    public $arguments;
+    protected $arguments;
 
     /**
-     * @var Command
+     * @var ICommand
      */
-    public $rollback;
+    protected $rollback;
 
     /**
      * @var mixed
      */
-    public $result;
+    protected $result;
 
     /**
      * Command constructor.
+     * @param string $name
      * @param object $instance
      * @param string $method
      * @param array $arguments
      * @throws \Exception
      */
-    public function __construct($instance, $method, array $arguments = array()) {
+    public function __construct($name, $instance, $method, array $arguments = array()) {
         if(!method_exists($instance, $method)) {
             throw new \Exception('Method ' . $method . ' not found in class ' . get_class($instance));
         }
+        $this->name = $name;
         $this->instance = $instance;
         $this->method = $method;
         $this->arguments = $arguments;
     }
 
     public function addRollback($instance, $method, array $arguments = array()) {
-        $this->rollback = new Command($instance, $method, $arguments);
+        $this->rollback = new Command($this->name . '-rollback', $instance, $method, $arguments);
     }
 
     public function run($arguments = array()) {
@@ -83,7 +90,7 @@ class Command implements ICommand {
     }
 
     /**
-     * @return Command
+     * @return ICommand
      */
     public function getRollback()
     {
@@ -93,8 +100,16 @@ class Command implements ICommand {
     /**
      * @return array
      */
-    function getArguments()
+    public function getArguments()
     {
         return $this->arguments;
+    }
+
+    /**
+     * @return string
+     */
+    public function getName()
+    {
+        return $this->name;
     }
 }

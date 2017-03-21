@@ -29,7 +29,7 @@ class CommandChain {
      * @param $name
      * @param $instance
      * @param $method
-     * @param array $arguments
+     * @param array|\Closure[] $arguments
      * @throws \Exception
      * @return ICommand
      */
@@ -37,13 +37,17 @@ class CommandChain {
         if(isset($this->commands[$name])) {
             throw new \Exception('Command under name ' . $name . ' already registered.');
         }
-        $this->commands[$name] = new Command($instance, $method, $arguments);
-        return $this->commands[$name];
+        $command = new Command($name, $instance, $method, $arguments);
+        $this->commands[] = $command;
+        return $command;
     }
 
+    /**
+     * @param boolean $failSilently
+     */
     public function run($failSilently = false) {
-        foreach ($this->commands as $name => $command) {
-            $this->runCommand($name, $command, $failSilently);
+        foreach ($this->commands as $command) {
+            $this->runCommand($command, $failSilently);
         }
     }
 
@@ -53,10 +57,7 @@ class CommandChain {
      * @throws \Exception
      */
     public function getResult($name) {
-        if(!isset($this->completedCommands[$name])) {
-            throw new \Exception('No completed command found named ' . $name);
-        }
-        return $this->completedCommands[$name]->getResult();
+        return $this->findCompletedCommand($name)->getResult();
     }
 
     public function getExceptionStack() {
@@ -67,27 +68,47 @@ class CommandChain {
      * @return ICommand[]
      */
     public function getCompletedCommands() {
-        return array_values($this->completedCommands);
+        return $this->completedCommands;
     }
 
-    private function fillArguments(array $arguments) {
-        foreach($arguments as $key => $argument) {
-            if(isset($argument[0]) && $argument[0] == '_') {
-                $name = ltrim($argument, '_');
-                if(!isset($this->completedCommands[$name])) {
-                    throw new \Exception('Could not find a complete command result named ' . $name);
-                }
-                $arguments[$key] = $this->completedCommands[$name]->getResult();
+    /**
+     * @return ICommand
+     */
+    public function getCompletedCommand($name) {
+        return $this->findCompletedCommand($name);
+    }
+
+    /**
+     * @param $name
+     * @return ICommand
+     * @throws \Exception
+     */
+    private function findCompletedCommand($name) {
+        foreach($this->completedCommands as $completedCommand) {
+            if($completedCommand->getName() == $name) {
+                $command = $completedCommand;
+            }
+        }
+        if(!isset($command)) {
+            throw new \Exception('No completed command with name ' . $name . ' found.');
+        }
+        return $command;
+    }
+
+    private function processArguments(array $arguments) {
+        for($i=0; $i<count($arguments); $i++) {
+            if($arguments[$i] instanceof \Closure) {
+                $arguments[$i] = $arguments[$i]($this);
             }
         }
         return $arguments;
     }
 
-    private function runCommand($name, ICommand $command, $failSilently) {
+    private function runCommand(ICommand $command, $failSilently) {
         try {
-            $filledArguments = $this->fillArguments($command->getArguments());
-            $command->run($filledArguments);
-            $this->completedCommands[$name] = $command;
+            $arguments = $this->processArguments($command->getArguments());
+            $command->run($arguments);
+            $this->completedCommands[] = $command;
         }
         catch(\Exception $ex) {
             $this->exceptionStack[] = $ex;
@@ -99,15 +120,15 @@ class CommandChain {
     }
 
     private function rollback() {
-        /** @var ICommand[] $completedCommands */
-        $completedCommands = array_reverse($this->completedCommands);
-        foreach($completedCommands as $name => $completedCommand) {
+        $completedCommands = $this->completedCommands;
+        for($i=count($completedCommands)-1; $i>=0; $i--) {
             try {
+                $completedCommand = $completedCommands[$i];
                 if($completedCommand->hasRollback()) {
                     $rollback = $completedCommand->getRollback();
-                    $filledArguments = $this->fillArguments($rollback->getArguments());
-                    $rollback->run($filledArguments);
-                    $this->completedCommands[$name . '-rollback'] = $rollback;
+                    $arguments = $this->processArguments($rollback->getArguments());
+                    $rollback->run($arguments);
+                    $this->completedCommands[] = $rollback;
                 }
             }
             catch(\Exception $ex) {
